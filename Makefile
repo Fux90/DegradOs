@@ -37,6 +37,9 @@ $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 cargo:
 	@cargo build --target $(target) --verbose
      
+nightly:
+	@rustup override add nightly
+	
 # compile assembly files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 	@mkdir -p $(shell dirname $@)

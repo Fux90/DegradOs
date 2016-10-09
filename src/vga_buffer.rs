@@ -1,5 +1,6 @@
 use core::ptr::Unique;
 use core::fmt::Write;
+use volatile::Volatile;
 use spin::Mutex;
 
 const BUFFER_HEIGHT: usize = 25;
@@ -123,7 +124,7 @@ struct ScreenChar {
 
 
 struct Buffer {
-	chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+	chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 
@@ -147,10 +148,11 @@ impl Writer {
 				let row = self.row_position;//BUFFER_HEIGHT - 1;
 				let col = self.column_position;
 				
-				self.buffer().chars[row][col] = ScreenChar {
+				let color_code = self.color_code;
+				self.buffer().chars[row][col].write(ScreenChar {
 					ascii_character: byte,
-					color_code: self.color_code,
-				};
+					color_code: color_code,
+				});
 				
 				self.column_position += 1;
 			}
@@ -167,6 +169,7 @@ impl Writer {
 		unsafe { self.buffer.get_mut() }
 	}
 	
+	/*
 	fn new_line(&mut self) {
 		for	row in 0..(BUFFER_HEIGHT-1) {
 			let buffer = self.buffer();
@@ -176,7 +179,19 @@ impl Writer {
 		self.clear_row(BUFFER_HEIGHT - 1);
 		self.column_position = 0;
 	}
-	
+	*/
+	fn new_line(&mut self) {
+		for row in 1..BUFFER_HEIGHT {
+			for col in 0..BUFFER_WIDTH {
+				let buffer = self.buffer();
+				let character = buffer.chars[row][col].read();
+				buffer.chars[row - 1][col].write(character);
+			}
+		}
+		self.clear_row(BUFFER_HEIGHT-1);
+		self.column_position = 0;
+}
+
 	fn down_one_row(&mut self) {
 		self.row_position += 1;
 		if (self.row_position == BUFFER_HEIGHT) {
@@ -206,6 +221,7 @@ impl Writer {
 		}
 	}
 
+	/*
 	fn clear_row(&mut self, row: usize) { 
 		let blank = ScreenChar {
 			ascii_character: b' ',
@@ -213,6 +229,16 @@ impl Writer {
 		};
 		
 		self.buffer().chars[row] = [blank; BUFFER_WIDTH];
+	}
+	*/
+	fn clear_row(&mut self, row: usize) {
+		let blank = ScreenChar {
+			ascii_character: b' ',
+			color_code: self.color_code,
+		};
+		for col in 0..BUFFER_WIDTH {
+			self.buffer().chars[row][col].write(blank);
+		}
 	}
 }
 

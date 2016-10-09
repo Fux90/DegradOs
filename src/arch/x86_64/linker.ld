@@ -14,6 +14,15 @@ SECTIONS {
 	.text :
 	{
 		/* Questa sezione contiene tutte le sezioni chiamate .text */
-		*(.text)
+		*(.text .text.*)
 	}
+	
+	.rodata :
+	{
+		*(.rodata .rodata.*)
+	}
+	
+	.data.rel.ro : {
+        *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
+    }
 }

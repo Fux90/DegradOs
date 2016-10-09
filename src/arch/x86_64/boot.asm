@@ -7,6 +7,8 @@ start:
 	mov esp, stack_top 	; Aggiorniamo il registro esp (stack pointer) 
 						; a stack_top (NB: cresce verso il basso!!).
 
+	mov edi, ebx		; Inserisce l'info pointeer di Multiboot in EDI
+						; (primo intero o ptr passato a funzione)
 	; Controlli.
 	call check_multiboot
 	call check_cpuid
@@ -193,7 +195,7 @@ p3_table:		; Page-Directory Pointer Table (PDP).
 p2_table:		; Page-Directory Table (PD).
 	resb 4096 
 stack_bottom:
-	resb 64	; reserve byte, in particolare 64 bit.
+	resb 4096	; reserve byte, in particolare 4096 bit.
 stack_top:
 ; END STACK ---------------------------------------------
 

@@ -9,6 +9,7 @@ extern crate multiboot2;
 
 #[macro_use]
 mod vga_buffer;
+mod memory;
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_info_pointer: usize) 
@@ -22,7 +23,12 @@ pub extern fn rust_main(multiboot_info_pointer: usize)
 	
 	//print_DegradOS();
 	blubbering(system_name, bit_mode);
-	print_info(multiboot_info_pointer);
+	
+	let boot_info = unsafe { multiboot2::load(multiboot_info_pointer) };
+	print_info(multiboot_info_pointer, boot_info);
+	
+	// Test frame allocation.
+	frame_allocation_test(multiboot_info_pointer, boot_info);
 	
 	vga_buffer::print_centered(system_name);
 	
@@ -39,9 +45,9 @@ pub fn blubbering(system_name: &str, bit_mode: u8) {
 	println!("Call me Neo.");
 }
 
-pub fn print_info(multiboot_info_pointer: usize) {
-	let boot_info = unsafe { multiboot2::load(multiboot_info_pointer) };
-	
+pub fn print_info(	multiboot_info_pointer: usize,
+					boot_info: &multiboot2::BootInformation) 
+{
 	print_multiboot_info(boot_info);
 	//print_kernel_sections(boot_info);
 	print_kernel_start_end(boot_info);
@@ -94,6 +100,39 @@ pub fn print_multiboot_start_end(multiboot_information_pointer: usize,
 	println! ("");
 	println! ("Multiboot start: {}", multiboot_start);
 	println! ("Multiboot end: {}", multiboot_end);
+}
+
+pub fn frame_allocation_test(multiboot_information_pointer: usize,
+							 boot_info: &multiboot2::BootInformation) {
+	let memory_map_tag = boot_info.memory_map_tag().expect("Memory tag required");
+	
+	let elf_sections_tag = 	boot_info.elf_sections_tag()
+							.expect("Elf-sections tag required");
+    
+	let kernel_start = 	elf_sections_tag.sections().map(|s| s.addr)
+						.min().unwrap();
+			
+	let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size)
+					 .max().unwrap();
+					 
+	let multiboot_start = multiboot_information_pointer;
+	let multiboot_end = multiboot_start + (boot_info.total_size as usize);
+	
+	let mut frame_allocator = memory::AreaFrameAllocator::new(
+		kernel_start as usize,
+		kernel_end as usize,
+		multiboot_start,
+		multiboot_end,
+		memory_map_tag.memory_areas()
+	);
+	
+	for i in 0.. {
+        use memory::FrameAllocator;
+        if let None = frame_allocator.allocate_frame() {
+            println!("allocated {} frames", i);
+            break;
+        }
+    }
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() {}

@@ -43,7 +43,9 @@ pub fn print_info(multiboot_info_pointer: usize) {
 	let boot_info = unsafe { multiboot2::load(multiboot_info_pointer) };
 	
 	print_multiboot_info(boot_info);
-	print_kernel_sections(boot_info);
+	//print_kernel_sections(boot_info);
+	print_kernel_start_end(boot_info);
+	print_multiboot_start_end(multiboot_info_pointer, boot_info);
 }
 
 pub fn print_multiboot_info(boot_info: &multiboot2::BootInformation) {
@@ -67,6 +69,31 @@ pub fn print_kernel_sections(boot_info: &multiboot2::BootInformation) {
 		println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
 			section.addr, section.size, section.flags);
 	}
+}
+
+pub fn print_kernel_start_end(boot_info: &multiboot2::BootInformation) {
+	let elf_sections_tag = 	boot_info.elf_sections_tag()
+							.expect("Elf-sections tag required");
+    
+	let kernel_start = 	elf_sections_tag.sections().map(|s| s.addr)
+						.min().unwrap();
+			
+	let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size)
+					 .max().unwrap();
+			
+	println! ("");
+	println! ("Kernel start: {}", kernel_start);
+	println! ("Kernel end: {}", kernel_end);
+}
+
+pub fn print_multiboot_start_end(multiboot_information_pointer: usize,
+								 boot_info: &multiboot2::BootInformation) {
+	let multiboot_start = multiboot_information_pointer;
+	let multiboot_end = multiboot_start + (boot_info.total_size as usize);
+	
+	println! ("");
+	println! ("Multiboot start: {}", multiboot_start);
+	println! ("Multiboot end: {}", multiboot_end);
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() {}

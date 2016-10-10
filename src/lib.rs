@@ -6,10 +6,16 @@ extern crate rlibc;
 extern crate volatile;
 extern crate spin;
 extern crate multiboot2;
+#[macro_use]
+extern crate bitflags;
 
 #[macro_use]
 mod vga_buffer;
 mod memory;
+
+// PAGE FLAGS.
+
+// ---
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_info_pointer: usize) 

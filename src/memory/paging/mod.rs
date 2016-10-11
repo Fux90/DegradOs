@@ -1,3 +1,5 @@
+extern crate x86;
+
 pub use self::entry::*;
 use memory::PAGE_SIZE;
 use memory::{Frame, FrameAllocator};
@@ -11,6 +13,63 @@ const ENTRY_COUNT: usize = 512;
 
 pub type PhysicalAddress = usize;
 pub type VirtualAddress = usize;
+
+
+// TESTING.
+
+pub fn test_paging<A>(allocator: &mut A)
+	where A: FrameAllocator
+{
+	let mut page_table = unsafe { ActivePageTable::new() };
+	
+	// Indirizzo 0 mappato.
+	println!("Some = {:?}", page_table.translate(0));
+	// Seconda entry di P1.
+	println!("Some = {:?}", page_table.translate(4096));
+	// Seconda entry di P2.
+	println!("Some = {:?}", page_table.translate(512 * 4096));
+	// 300esima entry di P2
+	println!("Some = {:?}", page_table.translate(300 * 512 * 4096));
+	// Seconda entry di P3
+	println!("None = {:?}", page_table.translate(512 * 512 * 4096));
+	// Ultimo byte mappato.
+	println!("Some = {:?}", page_table.translate(512 * 512 * 4096 - 1));
+	
+	test_map_to_and_unmap(allocator, page_table);
+	
+	println!("");
+}
+
+fn test_map_to_and_unmap<A>(allocator: &mut A, mut page_table: ActivePageTable)
+	where A: FrameAllocator
+{
+	// Map.
+	println! ("\nTesting map.");
+	
+	let addr = 42 * 512 * 512 * 4096; // 42esima entry di p3
+	let page = Page::containing_address(addr);
+	let frame = allocator.allocate_frame().expect("No more frames.");
+	
+	println! ("None = {:?}, map to {:?}",
+				page_table.translate(addr),
+				frame);
+				
+	page_table.map_to(page, frame, EntryFlags::empty(), allocator);
+	
+	println! ("Some = {:?}.", page_table.translate(addr));
+	println! ("Next free frame: {:?}", allocator.allocate_frame());
+	
+	// Unmap.
+	println! ("\nTesting unmap.");
+	
+	println!("{:#x}", unsafe { *(Page::containing_address(addr).start_address() as *const u64) });
+	page_table.unmap(Page::containing_address(addr), allocator);
+	
+	println! ("None = {:?}.", page_table.translate(addr));
+}
+
+// ---
+
 
 // PAGE.
 
@@ -167,10 +226,13 @@ impl ActivePageTable {
 					 .expect("mapping code does not support huge pages");
 		let frame = p1[page.p1_index()].pointed_frame().unwrap();
 		p1[page.p1_index()].set_unused();
+		unsafe {
+			x86::tlb::flush(page.start_address());
+		}
 		// --> free p(1,2,3) table if empty
 		// Fare il cehck dell'intera tabella ogni volta sarebbe costoso
 		// quindi serve una soluzione alternativa.
-		allocator.deallocate_frame(frame);
+		//allocator.deallocate_frame(frame);
 	}
 }
 

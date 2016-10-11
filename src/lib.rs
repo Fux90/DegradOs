@@ -132,6 +132,10 @@ pub fn frame_allocation_test(multiboot_information_pointer: usize,
 		memory_map_tag.memory_areas()
 	);
 	
+	// Testing.
+	memory::test_paging(&mut frame_allocator);
+	// ---
+	
 	for i in 0.. {
         use memory::FrameAllocator;
         if let None = frame_allocator.allocate_frame() {

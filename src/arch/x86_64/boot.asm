@@ -18,7 +18,13 @@ start:
 	call set_up_page_tables
 	call enable_paging
 	
+	; Recurive mapping.
+	; Una entry di P4 punta a P4 stessa, in modo da farla operare
+	; come P3 (e far slittare tutto il meccanismo di paging di 1 pagina)
 	; Abilit SSE.
+	mov eax, p4_table
+	or eax, 0b11					; present + writeable.
+	mov [p4_table + 511 * 8], eax 	; la 511ma pag di P$ punta a P4
 	call set_up_SSE
 	
 	; Carica la GDT a 64 bit.

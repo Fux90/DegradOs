@@ -6,10 +6,16 @@ extern crate rlibc;
 extern crate volatile;
 extern crate spin;
 extern crate multiboot2;
+#[macro_use]
+extern crate bitflags;
 
 #[macro_use]
 mod vga_buffer;
 mod memory;
+
+// PAGE FLAGS.
+
+// ---
 
 #[no_mangle]
 pub extern fn rust_main(multiboot_info_pointer: usize) 
@@ -125,6 +131,10 @@ pub fn frame_allocation_test(multiboot_information_pointer: usize,
 		multiboot_end,
 		memory_map_tag.memory_areas()
 	);
+	
+	// Testing.
+	memory::test_paging(&mut frame_allocator);
+	// ---
 	
 	for i in 0.. {
         use memory::FrameAllocator;
